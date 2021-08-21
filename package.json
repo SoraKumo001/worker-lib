@@ -1,0 +1,23 @@
+{
+  "name": "worker-lib",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "devDependencies": {
+    "typescript": "^4.3.5"
+  },
+  "description": "Library for easy use of web-worker",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SoraKumo001/worker-lib.git"
+  },
+  "keywords": ["Next.js","react","TypeScript","web-worker"],
+  "author": "SoraKumo",
+  "bugs": {
+    "url": "https://github.com/SoraKumo001/worker-lib/issues"
+  },
+  "homepage": "https://github.com/SoraKumo001/worker-lib#readme"
+}

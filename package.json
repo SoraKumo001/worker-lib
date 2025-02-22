@@ -1,17 +1,35 @@
 {
   "name": "worker-lib",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "./dist/cjs/index.js",
   "types": "./dist/cjs/index.d.ts",
   "exports": {
-    "require": "./dist/cjs/index.js",
-    "import": "./dist/esm/index.js"
+    ".": {
+      "types": "./dist/cjs/index.d.ts",
+      "require": "./dist/cjs/index.js",
+      "import": "./dist/esm/index.js"
+    },
+    "./node": {
+      "type": "./dist/cjs/node.d.ts",
+      "default": "./dist/cjs/node.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/cjs/index.d.ts"
+      ],
+      "node": [
+        "./dist/cjs/node.d.ts"
+      ]
+    }
   },
   "license": "MIT",
   "scripts": {
     "build": "tsc && tsc --project ./tsconfig.esm.json && cpy esm dist"
   },
   "devDependencies": {
+    "@types/node": "22.13.5",
     "cpy-cli": "5.0.0",
     "typescript": "^5.7.3"
   },

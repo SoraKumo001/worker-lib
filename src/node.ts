@@ -1,5 +1,4 @@
-import type { Worker } from "node:worker_threads";
-import { parentPort } from "node:worker_threads";
+import { parentPort, type Worker } from "node:worker_threads";
 type WorkerType = { [key: string]: (...args: any) => any };
 type WorkerRecvEvent<T> =
   | {
@@ -77,7 +76,7 @@ export const createWorker = <T extends WorkerType>(
   builder: () => Worker,
   limit = 4
 ) => {
-  const workers: {
+  let workers: {
     worker?: Worker;
     resultResolver?: PromiseWithResolvers<unknown>;
   }[] = Array(limit)
@@ -126,7 +125,12 @@ export const createWorker = <T extends WorkerType>(
       worker?.terminate();
     }
   };
-  return { execute, waitAll, close };
+  const setLimit = (limit: number) => {
+    workers = Array(limit)
+      .fill(undefined)
+      .map(() => ({}));
+  };
+  return { execute, waitAll, close, setLimit };
 };
 /**
  *

@@ -76,29 +76,65 @@ const exec = <T extends WorkerType>(
  * @param {number} [limit=0]
  * @return {*}
  */
-export const createWorker = <T extends WorkerType>(builder: () => Worker, limit = 0) => {
-  let workers = 0;
-  const unuses: Worker[] = [];
-  const jobs: any = [];
-  return <K extends keyof T>(name: K, ...value: Parameters<T[K]>): Promise<ReturnType<T[K]>> => {
-    return new Promise(async (resolve, reject) => {
-      jobs.push({ resolve, reject, name, value });
-      let worker = unuses.pop();
-      if (limit === 0 || workers < limit) {
-        worker = await init(builder());
-        workers++;
+export const createWorker = <T extends WorkerType>(
+  builder: () => Worker,
+  limit = 4
+) => {
+  let workers: {
+    worker?: Worker;
+    resultResolver?: PromiseWithResolvers<unknown>;
+  }[] = Array(limit)
+    .fill(undefined)
+    .map(() => ({}));
+  const getResolver = async () => {
+    while (true) {
+      const target = workers.find(({ resultResolver }) => !resultResolver);
+      if (target) {
+        target.resultResolver = Promise.withResolvers<unknown>();
+        if (!target.worker) target.worker = await init(builder());
+        return target;
       }
-      if (worker) {
-        while (jobs.length) {
-          const { resolve, reject, name, value } = jobs.shift();
-          await exec(worker, name, ...value)
-            .then((v) => resolve(v))
-            .catch((e) => reject(e));
-        }
-        unuses.push(worker);
-      }
-    });
+      await Promise.race(
+        workers.map(({ resultResolver }) => resultResolver?.promise)
+      );
+    }
   };
+
+  const execute = async <K extends keyof T>(
+    name: K,
+    ...value: Parameters<T[K]>
+  ): Promise<Awaited<ReturnType<T[K]>>> => {
+    const target = await getResolver();
+    const { resultResolver } = target;
+    if (!resultResolver) throw new Error("Unexpected error");
+    exec(target.worker!, name as string, ...value)
+      .then(resultResolver.resolve)
+      .catch(resultResolver.reject)
+      .finally(() => {
+        target.resultResolver = undefined;
+      });
+    return resultResolver.promise as Promise<Awaited<ReturnType<T[K]>>>;
+  };
+  const waitAll = async () => {
+    while (workers.find(({ resultResolver }) => resultResolver)) {
+      await Promise.all(
+        workers.flatMap(({ resultResolver }) =>
+          resultResolver ? [resultResolver.promise] : []
+        )
+      );
+    }
+  };
+  const close = () => {
+    for (const { worker } of workers) {
+      worker?.terminate();
+    }
+  };
+  const setLimit = (limit: number) => {
+    workers = Array(limit)
+      .fill(undefined)
+      .map(() => ({}));
+  };
+  return { execute, waitAll, close, setLimit };
 };
 /**
  *
@@ -125,7 +161,9 @@ export const initWorker = <T extends WorkerType>(WorkerProc: T) => {
       if (proc) {
         try {
           const params = value.map((v, index) =>
-            callback[index] ? (...params: unknown[]) => callbackProc<T>(worker, index, params) : v
+            callback[index]
+              ? (...params: unknown[]) => callbackProc<T>(worker, index, params)
+              : v
           );
           worker.postMessage({
             type: "result",

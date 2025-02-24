@@ -2,11 +2,100 @@
 
 ## Overview
 
-Library for easy use of web-worker
+Library for easy use of web-worker and worker_threads.
+
+```ts
+import { createWorker, initWorker } from "worker-lib"; //auto
+import { createWorker, initWorker } from "worker-lib/node"; // Node.js worker_threads
+import { createWorker, initWorker } from "worker-lib/web-worker"; // Web Worker
+```
 
 ## Example
 
-### Next.js
+https://github.com/SoraKumo001/worker-lib-samples/
+
+### Node.js (worker_threads)
+
+- src/worker-test.ts
+
+```ts
+import { initWorker } from "worker-lib";
+
+const add = (a: number, b: number) => {
+  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
+  return a + b;
+};
+const add2 = (a: string, b: string) => {
+  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
+  return a + b;
+};
+const sub = (a: number, b: number) => {
+  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
+  return a - b;
+};
+const mul = (a: number, b: number) => {
+  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
+  return a * b;
+};
+
+const error = (a: number, b: number) => {
+  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
+  throw new Error("throw");
+  return a + b;
+};
+
+// Initialization process to make it usable in Worker.
+const map = initWorker({ add, add2, sub, mul, error });
+// Export only the type
+export type WorkerTest = typeof map;
+```
+
+- src/index.ts
+
+```ts
+import { Worker } from "node:worker_threads";
+import { createWorker } from "worker-lib";
+import type { WorkerTest } from "./worker-test";
+import path from "node:path";
+
+const { execute, close } = createWorker<WorkerTest>(
+  () => new Worker(path.resolve(__dirname, "./worker-test.js")),
+  4 // Maximum parallel number
+);
+
+const main = async () => {
+  const a = 300;
+  const b = 100;
+  const p = [
+    execute("add", a, b).then((result) => {
+      console.log("add", result);
+    }),
+    execute("add2", a.toString(), b.toString()).then((result) => {
+      console.log("add2", result);
+    }),
+    execute("sub", a, b).then((result) => {
+      console.log("sub", result);
+    }),
+    execute("mul", a, b).then((result) => {
+      console.log("sub", result);
+    }),
+    execute("error", a, b)
+      .then((result) => {
+        console.log("error", result);
+      })
+      .catch((e) => {
+        console.error("error", e);
+      }),
+  ];
+  console.log("Start");
+  await Promise.all(p);
+  close(); // Close the worker
+};
+
+main();
+```
+
+### Next.js (Web Worker)
 
 - src/libs/worker-test.ts
 
@@ -154,14 +243,3 @@ const Page = () => {
 };
 export default Page;
 ```
-
-### How to use execute
-
-Types are automatically given by TypeScript.
-
-- basic form  
-  `execute("function name",... parameter) : Promise<resultType>`
-
-- For the add sample  
-  `execute("add",number,number) : Promise<number>`  
-  `execute("add2,string,string) : Promise<string>`

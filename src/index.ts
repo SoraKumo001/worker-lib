@@ -1,3 +1,4 @@
+import type { Worker as WorkerNode } from "node:worker_threads";
 type WorkerType = { [key: string]: (...args: any) => any };
 type WorkerRecvEvent<T> =
   | {
@@ -77,7 +78,7 @@ const exec = <T extends WorkerType>(
  * @return {*}
  */
 export const createWorker = <T extends WorkerType>(
-  builder: () => Worker,
+  builder: () => Worker | WorkerNode,
   limit = 4
 ) => {
   let workers: {
@@ -91,7 +92,7 @@ export const createWorker = <T extends WorkerType>(
       const target = workers.find(({ resultResolver }) => !resultResolver);
       if (target) {
         target.resultResolver = Promise.withResolvers<unknown>();
-        if (!target.worker) target.worker = await init(builder());
+        if (!target.worker) target.worker = await init(builder() as Worker);
         return target;
       }
       await Promise.race(

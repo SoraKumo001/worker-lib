@@ -131,6 +131,7 @@ export const createWorker = <T extends WorkerType>(
     }
   };
   const setLimit = (limit: number) => {
+    workers.forEach((w) => w.worker?.terminate());
     workers = Array(limit)
       .fill(undefined)
       .map(() => ({}));

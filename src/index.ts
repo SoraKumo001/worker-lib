@@ -87,6 +87,9 @@ export const createWorker = <T extends WorkerType>(
   }[] = Array(limit)
     .fill(undefined)
     .map(() => ({}));
+  const emptyWaits: PromiseWithResolvers<void>[] = [];
+  let isEmptyWait = false;
+
   const getResolver = async () => {
     while (true) {
       const target = workers.find(({ resultResolver }) => !resultResolver);
@@ -125,6 +128,26 @@ export const createWorker = <T extends WorkerType>(
       );
     }
   };
+  const waitEmpty = async (retryTime = 0) => {
+    const p = Promise.withResolvers<void>();
+    emptyWaits.push(p);
+    (async () => {
+      if (!isEmptyWait) {
+        isEmptyWait = true;
+        do {
+          const actives = workers.flatMap(({ resultResolver }) =>
+            resultResolver ? [resultResolver.promise] : []
+          );
+          if (actives.length) await Promise.race(actives);
+          emptyWaits.shift()?.resolve();
+          if (retryTime) await new Promise((r) => setTimeout(r, retryTime));
+          else await Promise.resolve();
+        } while (emptyWaits.length);
+        isEmptyWait = false;
+      }
+    })();
+    return p.promise;
+  };
   const close = () => {
     for (const { worker } of workers) {
       worker?.terminate();
@@ -136,7 +159,7 @@ export const createWorker = <T extends WorkerType>(
       .fill(undefined)
       .map(() => ({}));
   };
-  return { execute, waitAll, close, setLimit };
+  return { execute, waitAll, waitEmpty, close, setLimit };
 };
 /**
  *

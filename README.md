@@ -5,9 +5,29 @@
 Library for easy use of web-worker and worker_threads.
 
 ```ts
-import { createWorker, initWorker } from "worker-lib"; //auto
-import { createWorker, initWorker } from "worker-lib/node"; // Node.js worker_threads
-import { createWorker, initWorker } from "worker-lib/web-worker"; // Web Worker
+import {
+  createWorker,
+  initWorker,
+  waitAll,
+  waitEmpty,
+  close,
+} from "worker-lib"; //auto
+
+import {
+  createWorker,
+  initWorker,
+  waitAll,
+  waitEmpty,
+  close,
+} from "worker-lib/node"; // Node.js worker_threads
+
+import {
+  createWorker,
+  initWorker,
+  waitAll,
+  waitEmpty,
+  close,
+} from "worker-lib/web-worker"; // Web Worker
 ```
 
 ## Example

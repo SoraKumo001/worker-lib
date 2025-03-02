@@ -9,7 +9,7 @@ import {
   createWorker,
   initWorker,
   waitAll,
-  waitEmpty,
+  waitReady,
   close,
 } from "worker-lib"; //auto
 
@@ -17,7 +17,7 @@ import {
   createWorker,
   initWorker,
   waitAll,
-  waitEmpty,
+  waitReady,
   close,
 } from "worker-lib/node"; // Node.js worker_threads
 
@@ -25,7 +25,7 @@ import {
   createWorker,
   initWorker,
   waitAll,
-  waitEmpty,
+  waitReady,
   close,
 } from "worker-lib/web-worker"; // Web Worker
 ```

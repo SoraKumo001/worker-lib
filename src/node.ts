@@ -123,7 +123,7 @@ export const createWorker = <T extends WorkerType>(
       );
     }
   };
-  const waitEmpty = async (retryTime = 0) => {
+  const waitReady = async (retryTime = 1) => {
     const p = Promise.withResolvers<void>();
     emptyWaits.push(p);
     (async () => {
@@ -133,7 +133,7 @@ export const createWorker = <T extends WorkerType>(
           const actives = workers.flatMap(({ resultResolver }) =>
             resultResolver ? [resultResolver.promise] : []
           );
-          if (actives.length) await Promise.race(actives);
+          if (workers.length === actives.length) await Promise.race(actives);
           emptyWaits.shift()?.resolve();
           if (retryTime) await new Promise((r) => setTimeout(r, retryTime));
           else await Promise.resolve();
@@ -154,7 +154,7 @@ export const createWorker = <T extends WorkerType>(
       .fill(undefined)
       .map(() => ({}));
   };
-  return { execute, waitAll, waitEmpty, close, setLimit };
+  return { execute, waitAll, waitReady, close, setLimit };
 };
 /**
  *

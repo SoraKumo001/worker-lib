@@ -70,15 +70,22 @@ const exec = <T extends WorkerType>(
 };
 
 /**
- * createWorker
+ * Creates a worker pool with a specified limit of concurrent workers.
  *
- * @template T
- * @param {() => Worker} builder
- * @param {number} [limit=0]
- * @return {*}
+ * @template T - The type of the worker.
+ * @param {() => Worker | WorkerNode} builder - A function that returns a new Worker or WorkerNode instance.
+ * @param {number} [limit=4] - The maximum number of concurrent workers.
+ * @returns {{
+ *   execute: <K extends keyof T>(name: K, ...value: Parameters<T[K]>) => Promise<Awaited<ReturnType<T[K]>>>,
+ *   waitAll: () => Promise<void>,
+ *   waitReady: (retryTime?: number) => Promise<void>,
+ *   close: () => void,
+ *   setLimit: (limit: number) => void,
+ *   launchWorker: () => Promise<void[]>
+ * }} An object containing methods to interact with the worker pool.
  */
 export const createWorker = <T extends WorkerType>(
-  builder: () => Worker | WorkerNode,
+  builder: () => Worker | WorkerNode | string | URL,
   limit = 4
 ) => {
   let workers: {
@@ -95,7 +102,14 @@ export const createWorker = <T extends WorkerType>(
       const target = workers.find(({ resultResolver }) => !resultResolver);
       if (target) {
         target.resultResolver = Promise.withResolvers<unknown>();
-        if (!target.worker) target.worker = await init(builder() as Worker);
+        if (!target.worker) {
+          const result = builder();
+          const worker =
+            result instanceof Worker
+              ? result
+              : new Worker(result as string | URL);
+          target.worker = await init(worker);
+        }
         return target;
       }
       await Promise.race(
@@ -104,6 +118,13 @@ export const createWorker = <T extends WorkerType>(
     }
   };
 
+  /**
+   * @method execute - Executes a method on a worker.
+   * @template K - The key of the method to execute.
+   * @param {K} name - The name of the method to execute.
+   * @param {...Parameters<T[K]>} value - The arguments to pass to the method.
+   * @returns {Promise<Awaited<ReturnType<T[K]>>>} A promise that resolves with the result of the method.
+   */
   const execute = async <K extends keyof T>(
     name: K,
     ...value: Parameters<T[K]>
@@ -119,6 +140,30 @@ export const createWorker = <T extends WorkerType>(
       });
     return resultResolver.promise as Promise<Awaited<ReturnType<T[K]>>>;
   };
+
+  /**
+   * @method launchWorker - Launches all workers in the pool.
+   * @returns {Promise<void[]>} A promise that resolves when all workers have been launched.
+   */
+  const launchWorker = async () => {
+    return Promise.all(
+      workers.map(async (target) => {
+        if (!target.worker) {
+          const result = builder();
+          const worker =
+            result instanceof Worker
+              ? result
+              : new Worker(result as string | URL);
+          target.worker = await init(worker);
+        }
+      })
+    );
+  };
+
+  /**
+   * @method waitAll - Waits for all workers to complete their tasks.
+   * @returns {Promise<void>} A promise that resolves when all workers have completed their tasks.
+   */
   const waitAll = async () => {
     while (workers.find(({ resultResolver }) => resultResolver)) {
       await Promise.all(
@@ -128,6 +173,12 @@ export const createWorker = <T extends WorkerType>(
       );
     }
   };
+
+  /**
+   * @method waitReady - Waits for the worker pool to be ready.
+   * @param {number} [retryTime=1] - The time to wait between retries in milliseconds.
+   * @returns {Promise<void>} A promise that resolves when the worker pool is ready.
+   */
   const waitReady = async (retryTime = 1) => {
     const p = Promise.withResolvers<void>();
     emptyWaits.push(p);
@@ -148,25 +199,35 @@ export const createWorker = <T extends WorkerType>(
     })();
     return p.promise;
   };
+
+  /**
+   * @method close - Terminates all workers in the pool.
+   */
   const close = () => {
     for (const { worker } of workers) {
       worker?.terminate();
     }
   };
+
+  /**
+   * @method setLimit - Sets a new limit for the number of concurrent workers.
+   * @param {number} limit - The new limit for the number of concurrent workers.
+   */
   const setLimit = (limit: number) => {
     workers.forEach((w) => w.worker?.terminate());
     workers = Array(limit)
       .fill(undefined)
       .map(() => ({}));
   };
-  return { execute, waitAll, waitReady, close, setLimit };
+  return { execute, waitAll, waitReady, close, setLimit, launchWorker };
 };
+
 /**
+ * Initializes a web worker with the provided worker process.
  *
- *
- * @template T
- * @param {T} WorkerProc
- * @return {*}
+ * @template T - The type of the worker process.
+ * @param {T} WorkerProc - The worker process to initialize.
+ * @returns {T} The initialized worker process.
  */
 export const initWorker = <T extends WorkerType>(WorkerProc: T) => {
   const worker = self as unknown as Worker;

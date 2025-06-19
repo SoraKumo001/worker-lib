@@ -1,5 +1,10 @@
 # worker-lib
 
+[![](https://img.shields.io/npm/l/worker-lib)](https://www.npmjs.com/package/worker-lib)
+[![](https://img.shields.io/npm/v/worker-lib)](https://www.npmjs.com/package/worker-lib)
+[![](https://img.shields.io/npm/dw/worker-lib)](https://www.npmjs.com/package/worker-lib)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/SoraKumo001/worker-lib)
+
 ## Overview
 
 Library for easy use of web-worker and worker_threads.

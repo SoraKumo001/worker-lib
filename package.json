@@ -48,9 +48,9 @@
     "build": "tsc && tsc --project ./tsconfig.esm.json && cpy esm dist"
   },
   "devDependencies": {
-    "@types/node": "22.13.9",
+    "@types/node": "24.0.3",
     "cpy-cli": "5.0.0",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.3"
   },
   "description": "Library for easy use of web-worker",
   "repository": {

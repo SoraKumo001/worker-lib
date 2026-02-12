@@ -1,6 +1,6 @@
 {
   "name": "worker-lib",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "main": "./dist/cjs/index.js",
   "types": "./dist/cjs/index.d.ts",
   "exports": {
@@ -48,9 +48,9 @@
     "build": "tsc && tsc --project ./tsconfig.esm.json && cpy esm dist"
   },
   "devDependencies": {
-    "@types/node": "24.0.3",
-    "cpy-cli": "5.0.0",
-    "typescript": "^5.8.3"
+    "@types/node": "25.2.3",
+    "cpy-cli": "7.0.0",
+    "typescript": "^5.9.3"
   },
   "description": "Library for easy use of web-worker",
   "repository": {

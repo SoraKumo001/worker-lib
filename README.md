@@ -156,6 +156,33 @@ const map = initWorker({ add, add2, sub, mul, error });
 export type WorkerTest = typeof map;
 ```
 
+### Callback
+
+`worker-lib` supports passing callback functions to workers.
+
+- worker.ts
+```ts
+import { initWorker } from "worker-lib";
+
+const progressTask = async (onProgress: (percent: number) => void) => {
+  onProgress(10);
+  // ... heavy task ...
+  onProgress(50);
+  // ... heavy task ...
+  onProgress(100);
+  return "Done";
+};
+
+initWorker({ progressTask });
+```
+
+- main.ts
+```ts
+const result = await execute("progressTask", (percent) => {
+  console.log(`Progress: ${percent}%`);
+});
+```
+
 - src/app/page.tsx
 
 ```tsx

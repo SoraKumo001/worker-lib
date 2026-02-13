@@ -16,3 +16,4 @@ storybook-static
 pnpm-lock.yaml
 tsconfig.json
 tsconfig.esm.json
+test

@@ -7,291 +7,103 @@
 
 ## Overview
 
-Library for easy use of web-worker and worker_threads.
+`worker-lib` is a lightweight, type-safe library designed to make **Web Workers** (Browser) and **worker_threads** (Node.js) as easy to use as standard asynchronous functions.
 
-```ts
-import {
-  createWorker,
-  initWorker,
-  waitAll,
-  waitReady,
-  close,
-} from "worker-lib"; //auto
+## Features
 
-import {
-  createWorker,
-  initWorker,
-  waitAll,
-  waitReady,
-  close,
-} from "worker-lib/node"; // Node.js worker_threads
+- **🚀 Cross-Platform**: Supports both Browser and Node.js with a unified API.
+- **🛡️ Type-Safe**: Full TypeScript support with automatic type inference for worker functions.
+- **⚡ Parallelism**: Built-in worker pool management with configurable concurrency limits.
+- **🔄 Callback Support**: Pass functions as arguments to workers for progress updates or event handling.
+- **📦 Zero Config**: Minimal setup required to get started.
 
-import {
-  createWorker,
-  initWorker,
-  waitAll,
-  waitReady,
-  close,
-} from "worker-lib/web-worker"; // Web Worker
+## Installation
+
+```bash
+npm install worker-lib
+# or
+pnpm add worker-lib
 ```
 
-## Example
+## Basic Usage
 
-https://github.com/SoraKumo001/worker-lib-samples/
+### 1. Define Worker (worker.ts)
 
-### Node.js (worker_threads)
-
-- src/worker-test.ts
+Register your functions using `initWorker`.
 
 ```ts
 import { initWorker } from "worker-lib";
 
-const add = (a: number, b: number) => {
-  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
-  return a + b;
-};
-const add2 = (a: string, b: string) => {
-  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
-  return a + b;
-};
-const sub = (a: number, b: number) => {
-  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
-  return a - b;
-};
-const mul = (a: number, b: number) => {
-  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
-  return a * b;
+const add = (a: number, b: number) => a + b;
+
+const heavyTask = async (data: string, onProgress: (percent: number, status: string) => void) => {
+  onProgress(10, "Starting...");
+  // ... heavy computation ...
+  onProgress(100, "Done");
+  return `Processed: ${data}`;
 };
 
-const error = (a: number, b: number) => {
-  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
-  throw new Error("throw");
-  return a + b;
-};
-
-// Initialization process to make it usable in Worker.
-const map = initWorker({ add, add2, sub, mul, error });
-// Export only the type
-export type WorkerTest = typeof map;
+const workerMap = initWorker({ add, heavyTask });
+export type MyWorker = typeof workerMap;
 ```
 
-- src/index.ts
+### 2. Use Worker in Main Thread
+
+#### Node.js (worker_threads)
 
 ```ts
 import { Worker } from "node:worker_threads";
-import { createWorker } from "worker-lib";
-import type { WorkerTest } from "./worker-test";
+import { createWorker } from "worker-lib/node";
+import type { MyWorker } from "./worker";
 import path from "node:path";
 
-const { execute, close } = createWorker<WorkerTest>(
-  () => new Worker(path.resolve(__dirname, "./worker-test.js")),
-  4 // Maximum parallel number
+const { execute, close } = createWorker<MyWorker>(
+  () => new Worker(path.resolve(__dirname, "./worker.js")),
+  4 // Max parallel workers
 );
 
-const main = async () => {
-  const a = 300;
-  const b = 100;
-  const p = [
-    execute("add", a, b).then((result) => {
-      console.log("add", result);
-    }),
-    execute("add2", a.toString(), b.toString()).then((result) => {
-      console.log("add2", result);
-    }),
-    execute("sub", a, b).then((result) => {
-      console.log("sub", result);
-    }),
-    execute("mul", a, b).then((result) => {
-      console.log("sub", result);
-    }),
-    execute("error", a, b)
-      .then((result) => {
-        console.log("error", result);
-      })
-      .catch((e) => {
-        console.error("error", e);
-      }),
-  ];
-  console.log("Start");
-  await Promise.all(p);
-  close(); // Close the worker
-};
-
-main();
+const result = await execute("add", 10, 20);
+console.log(result); // 30
 ```
 
-### Next.js (Web Worker)
-
-- src/libs/worker-test.ts
+#### Browser / Next.js (Web Worker)
 
 ```ts
-import { initWorker } from "worker-lib";
+import { createWorker } from "worker-lib";
+import type { MyWorker } from "./worker";
 
-const add = (a: number, b: number) => {
-  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
-  return a + b;
-};
-const add2 = (a: string, b: string) => {
-  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
-  return a + b;
-};
-const sub = (a: number, b: number) => {
-  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
-  return a - b;
-};
-const mul = (a: number, b: number) => {
-  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
-  return a * b;
-};
+const { execute } = createWorker<MyWorker>(
+  () => new Worker(new URL("./worker.ts", import.meta.url)),
+  5
+);
 
-const error = (a: number, b: number) => {
-  for (let i = 0; i < 1000000000; i++); //Overload unnecessarily
-  throw new Error("throw");
-  return a + b;
-};
-
-// Initialization process to make it usable in Worker.
-const map = initWorker({ add, add2, sub, mul, error });
-// Export only the type
-export type WorkerTest = typeof map;
-```
-
-### Callback
-
-`worker-lib` supports passing callback functions to workers.
-
-- worker.ts
-```ts
-import { initWorker } from "worker-lib";
-
-const progressTask = async (onProgress: (percent: number) => void) => {
-  onProgress(10);
-  // ... heavy task ...
-  onProgress(50);
-  // ... heavy task ...
-  onProgress(100);
-  return "Done";
-};
-
-initWorker({ progressTask });
-```
-
-- main.ts
-```ts
-const result = await execute("progressTask", (percent) => {
-  console.log(`Progress: ${percent}%`);
+const result = await execute("heavyTask", "input-data", (percent, status) => {
+  console.log(`[${status}] ${percent}%`);
 });
 ```
 
-- src/app/page.tsx
+## API Reference
 
-```tsx
-"use client";
-import { useState } from "react";
-import { createWorker } from "worker-lib";
-import type { WorkerTest } from "../libs/worker-test";
+### `initWorker(workerProcess)`
+Initializes the worker side.
+- `workerProcess`: An object containing the functions to be exposed.
 
-// Create an instance to execute the Worker
-// execute("function name",... parameter) to start the Worker
-const execute = createWorker<WorkerTest>(
-  () => new Worker(new URL("../libs/worker-test", import.meta.url)),
-  5 // Maximum parallel number
-);
+### `createWorker(builder, limit?)`
+Creates a worker pool.
+- `builder`: A function that returns a new `Worker` instance.
+- `limit`: (Optional) Maximum number of concurrent workers. Default is `4`.
 
-const Page = () => {
-  const [values, setValues] = useState<(number | string)[]>([]);
-  const [a, setA] = useState(300);
-  const [b, setB] = useState(100);
+### `execute(name, ...args)`
+Executes a worker function.
+- `name`: The name of the function to execute.
+- `args`: Arguments to pass to the function (supports callbacks).
 
-  return (
-    <div>
-      <form>
-        <input
-          name="a"
-          value={a}
-          onChange={(e) => setA(Number(e.currentTarget.value))}
-        />
-        <input
-          name="b"
-          value={b}
-          onChange={(e) => setB(Number(e.currentTarget.value))}
-        />
-        <button
-          type="button"
-          onClick={async () => {
-            const index = values.length;
-            setValues([...values, "running"]);
-            //Calling a Worker
-            const result = await execute("add", a, b);
-            setValues((values) =>
-              values.map((v, i) => (i === index ? result : v))
-            );
-          }}
-        >
-          Add
-        </button>
-        <button
-          type="button"
-          onClick={async () => {
-            const index = values.length;
-            setValues([...values, "running"]);
-            //Calling a Worker
-            const result = await execute("add2", String(a), String(b));
-            setValues((values) =>
-              values.map((v, i) => (i === index ? result : v))
-            );
-          }}
-        >
-          Add(String)
-        </button>
-        <button
-          type="button"
-          onClick={async () => {
-            const index = values.length;
-            setValues([...values, "running"]);
-            //Calling a Worker
-            const result = await execute("sub", a, b);
-            setValues((values) =>
-              values.map((v, i) => (i === index ? result : v))
-            );
-          }}
-        >
-          Sub
-        </button>
-        <button
-          type="button"
-          onClick={async () => {
-            const index = values.length;
-            setValues([...values, "running"]);
-            //Calling a Worker
-            const result = await execute("mul", a, b);
-            setValues((values) =>
-              values.map((v, i) => (i === index ? result : v))
-            );
-          }}
-        >
-          Mul
-        </button>
-        <button
-          type="button"
-          onClick={async () => {
-            const index = values.length;
-            setValues([...values, "running"]);
-            //Calling a Worker
-            const result = await execute("error", a, b).catch((e) => e);
-            setValues((values) =>
-              values.map((v, i) => (i === index ? result : v))
-            );
-          }}
-        >
-          Error
-        </button>
-      </form>
-      {values.map((v, index) => (
-        <div key={index}>{v}</div>
-      ))}
-    </div>
-  );
-};
-export default Page;
-```
+### `waitAll()`
+Returns a promise that resolves when all currently running tasks are complete.
+
+### `close()`
+Terminates all workers in the pool.
+
+## Examples
+
+For more detailed examples, check the [samples repository](https://github.com/SoraKumo001/worker-lib-samples/).

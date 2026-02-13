@@ -1,6 +1,6 @@
 {
   "name": "worker-lib",
-  "version": "2.0.9",
+  "version": "2.1.0",
   "main": "./dist/cjs/index.js",
   "types": "./dist/cjs/index.d.ts",
   "exports": {
@@ -45,12 +45,15 @@
   },
   "license": "MIT",
   "scripts": {
-    "build": "tsc && tsc --project ./tsconfig.esm.json && cpy esm dist"
+    "build": "tsc && tsc --project ./tsconfig.esm.json && cpy esm dist",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/node": "25.2.3",
     "cpy-cli": "7.0.0",
-    "typescript": "^5.9.3"
+    "tsx": "4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "4.0.18"
   },
   "description": "Library for easy use of web-worker",
   "repository": {

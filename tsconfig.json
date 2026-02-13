@@ -22,7 +22,7 @@
     // "useDefineForClassFields": true,                  /* Emit ECMAScript-standard-compliant class fields. */
     /* Modules */
     "module": "commonjs" /* Specify what module code is generated. */,
-    "rootDir": "./src" /* Specify the root folder within your source files. */,
+    // "rootDir": "./src" /* Specify the root folder within your source files. */,
     // "moduleResolution": "node",                       /* Specify how TypeScript looks up a file from a given module specifier. */
     // "baseUrl": "./",                       /* Base directory to resolve non-absolute module names. */
     // "paths": {},                           /* A series of entries which re-map imports to lookup locations relative to the 'baseUrl'. */
@@ -89,6 +89,6 @@
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
     "skipLibCheck": true /* Skip type checking all .d.ts files. */
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "test/env.js"],
-  "exclude": ["node_modules", "dist/**/*", "test/**/*"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist/**/*"]
 }

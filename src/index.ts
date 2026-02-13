@@ -1,6 +1,9 @@
 import type { Worker as WorkerNode } from "node:worker_threads";
 type WorkerType = { [key: string]: (...args: any) => any };
-type WorkerRecvEvent<T> =
+type CallbackValue<T extends WorkerType> = Parameters<
+  Extract<Parameters<T[keyof T]>[number], (...args: any) => any>
+>;
+type WorkerRecvEvent<T extends WorkerType> =
   | {
       type: "function";
       payload: { name: keyof T; callback: boolean[]; value: unknown[] };
@@ -9,7 +12,12 @@ type WorkerRecvEvent<T> =
 type WorkerSendEvent<T extends WorkerType> =
   | {
       type: "callback";
-      payload: { id: number; result: unknown; index: number; value: T };
+      payload: {
+        id: number;
+        result: unknown;
+        index: number;
+        value: CallbackValue<T>;
+      };
     }
   | {
       type: "result";
@@ -41,7 +49,7 @@ const exec = <T extends WorkerType>(
       const { data } = result;
       switch (data.type) {
         case "callback":
-          const r = value[data.payload.index](data.payload.value);
+          const r = value[data.payload.index](...data.payload.value);
           worker.postMessage({
             type: "callback_result",
             payload: { id: data.payload.id, result: await r },
@@ -248,7 +256,8 @@ export const initWorker = <T extends WorkerType>(WorkerProc: T) => {
         try {
           const params = value.map((v, index) =>
             callback[index]
-              ? (...params: unknown[]) => callbackProc<T>(worker, index, params)
+              ? (...params: CallbackValue<T>) =>
+                  callbackProc<T>(worker, index, params)
               : v
           );
           worker.postMessage({
@@ -265,7 +274,11 @@ export const initWorker = <T extends WorkerType>(WorkerProc: T) => {
   return WorkerProc;
 };
 
-const callbackProc = <T>(worker: Worker, index: number, params: unknown[]) => {
+const callbackProc = <T extends WorkerType>(
+  worker: Worker,
+  index: number,
+  params: CallbackValue<T>
+) => {
   const id = WorkerValue.id++;
   return new Promise((resolve) => {
     worker.addEventListener(

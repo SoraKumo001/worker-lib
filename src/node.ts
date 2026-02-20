@@ -1,4 +1,5 @@
 import { parentPort, Worker } from "node:worker_threads";
+export { Worker } from "node:worker_threads";
 type WorkerType = { [key: string]: (...args: any) => any };
 type CallbackValue<T extends WorkerType> = Parameters<
   Extract<Parameters<T[keyof T]>[number], (...args: any) => any>
@@ -89,7 +90,7 @@ const exec = <T extends WorkerType>(
  */
 export const createWorker = <T extends WorkerType>(
   builder: () => Worker | string | URL,
-  limit = 4
+  limit = 4,
 ) => {
   let workers: {
     worker?: Worker;
@@ -113,7 +114,7 @@ export const createWorker = <T extends WorkerType>(
         return target;
       }
       await Promise.race(
-        workers.map(({ resultResolver }) => resultResolver?.promise)
+        workers.map(({ resultResolver }) => resultResolver?.promise),
       );
     }
   };
@@ -153,7 +154,7 @@ export const createWorker = <T extends WorkerType>(
           const worker = result instanceof Worker ? result : new Worker(result);
           target.worker = await init(worker);
         }
-      })
+      }),
     );
   };
 
@@ -165,8 +166,8 @@ export const createWorker = <T extends WorkerType>(
     while (workers.find(({ resultResolver }) => resultResolver)) {
       await Promise.all(
         workers.flatMap(({ resultResolver }) =>
-          resultResolver ? [resultResolver.promise] : []
-        )
+          resultResolver ? [resultResolver.promise] : [],
+        ),
       );
     }
   };
@@ -184,7 +185,7 @@ export const createWorker = <T extends WorkerType>(
         isEmptyWait = true;
         do {
           const actives = workers.flatMap(({ resultResolver }) =>
-            resultResolver ? [resultResolver.promise] : []
+            resultResolver ? [resultResolver.promise] : [],
           );
           if (workers.length === actives.length) await Promise.race(actives);
           emptyWaits.shift()?.resolve();
@@ -249,7 +250,7 @@ export const initWorker = <T extends WorkerType>(WorkerProc: T) => {
             callback[index]
               ? (...params: CallbackValue<T>) =>
                   callbackProc<T>(worker as never, index, params)
-              : v
+              : v,
           );
           worker.postMessage({
             type: "result",
@@ -268,7 +269,7 @@ export const initWorker = <T extends WorkerType>(WorkerProc: T) => {
 const callbackProc = <T extends WorkerType>(
   worker: Worker,
   index: number,
-  params: CallbackValue<T>
+  params: CallbackValue<T>,
 ) => {
   const id = WorkerValue.id++;
   return new Promise((resolve) => {

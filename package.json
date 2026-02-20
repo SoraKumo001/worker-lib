@@ -1,6 +1,6 @@
 {
   "name": "worker-lib",
-  "version": "2.1.0",
+  "version": "2.1.2",
   "main": "./dist/cjs/index.js",
   "types": "./dist/cjs/index.d.ts",
   "exports": {
@@ -12,7 +12,8 @@
       },
       "node": {
         "type": "./dist/cjs/node.d.ts",
-        "default": "./dist/cjs/node.js"
+        "default": "./dist/cjs/node.js",
+        "import": "./dist/esm/node.js"
       },
       "default": {
         "types": "./dist/cjs/index.d.ts",
@@ -27,7 +28,8 @@
     },
     "./node": {
       "type": "./dist/cjs/node.d.ts",
-      "default": "./dist/cjs/node.js"
+      "default": "./dist/cjs/node.js",
+      "import": "./dist/esm/node.js"
     }
   },
   "typesVersions": {

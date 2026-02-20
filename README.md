@@ -11,10 +11,11 @@
 
 ## Features
 
-- **🚀 Cross-Platform**: Supports both Browser and Node.js with a unified API.
+- **🚀 Universal API**: Supports both Browser and Node.js with a single unified entry point.
 - **🛡️ Type-Safe**: Full TypeScript support with automatic type inference for worker functions.
 - **⚡ Parallelism**: Built-in worker pool management with configurable concurrency limits.
 - **🔄 Callback Support**: Pass functions as arguments to workers for progress updates or event handling.
+- **📦 Flexible Instantiation**: Pass a `Worker` instance, a file path (string), or a `URL`.
 - **📦 Zero Config**: Minimal setup required to get started.
 
 ## Installation
@@ -29,7 +30,7 @@ pnpm add worker-lib
 
 ### 1. Define Worker (worker.ts)
 
-Register your functions using `initWorker`.
+Register your functions using `initWorker`. This function is universal and works in both Browser and Node.js.
 
 ```ts
 import { initWorker } from "worker-lib";
@@ -49,16 +50,17 @@ export type MyWorker = typeof workerMap;
 
 ### 2. Use Worker in Main Thread
 
-#### Node.js (worker_threads)
+#### Unified Usage (Browser & Node.js)
+
+Since `worker-lib` uses conditional exports, you can use the same import for both environments. The library will automatically select the appropriate implementation.
 
 ```ts
-import { Worker } from "node:worker_threads";
-import { createWorker } from "worker-lib/node";
+import { createWorker } from "worker-lib";
 import type { MyWorker } from "./worker";
-import path from "node:path";
 
+// You can pass a string path, a URL, or a Worker instance
 const { execute, close } = createWorker<MyWorker>(
-  () => new Worker(path.resolve(__dirname, "./worker.js")),
+  () => new URL("./worker.ts", import.meta.url), // or "./worker.js" in Node
   4 // Max parallel workers
 );
 
@@ -66,20 +68,19 @@ const result = await execute("add", 10, 20);
 console.log(result); // 30
 ```
 
-#### Browser / Next.js (Web Worker)
+#### Node.js Specific (Optional)
+
+If you need to use `node:worker_threads` features explicitly:
 
 ```ts
+import { Worker } from "worker-lib"; // Automatically uses node:worker_threads in Node.js
 import { createWorker } from "worker-lib";
-import type { MyWorker } from "./worker";
+import path from "node:path";
 
-const { execute } = createWorker<MyWorker>(
-  () => new Worker(new URL("./worker.ts", import.meta.url)),
-  5
+const { execute } = createWorker(
+  () => new Worker(path.resolve(__dirname, "./worker.js")),
+  2
 );
-
-const result = await execute("heavyTask", "input-data", (percent, status) => {
-  console.log(`[${status}] ${percent}%`);
-});
 ```
 
 ## API Reference
@@ -90,8 +91,16 @@ Initializes the worker side.
 
 ### `createWorker(builder, limit?)`
 Creates a worker pool.
-- `builder`: A function that returns a new `Worker` instance.
+- `builder`: A function that returns a `Worker`, `string` (path), or `URL`.
 - `limit`: (Optional) Maximum number of concurrent workers. Default is `4`.
+
+Returns an object with:
+- `execute(name, ...args)`: Executes a worker function.
+- `waitAll()`: Waits for all running tasks to complete.
+- `waitReady(retryTime?)`: Waits for an available worker slot.
+- `launchWorker()`: Pre-launches all workers in the pool.
+- `setLimit(limit)`: Dynamically changes the worker pool size.
+- `close()`: Terminates all workers.
 
 ### `execute(name, ...args)`
 Executes a worker function.
@@ -101,8 +110,21 @@ Executes a worker function.
 ### `waitAll()`
 Returns a promise that resolves when all currently running tasks are complete.
 
+### `waitReady(retryTime?)`
+Returns a promise that resolves when there is an available slot in the worker pool.
+- `retryTime`: (Optional) Milliseconds to wait between checks.
+
+### `launchWorker()`
+Forcefully initializes all workers up to the `limit`. By default, workers are created lazily.
+
+### `setLimit(limit)`
+Changes the maximum number of concurrent workers. This will terminate existing workers and reset the pool.
+
 ### `close()`
-Terminates all workers in the pool.
+Terminates all workers in the pool immediately.
+
+### `Worker`
+The environment-specific Worker class (Web Worker in browser, `worker_threads` in Node.js).
 
 ## Examples
 
